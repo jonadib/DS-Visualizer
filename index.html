@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Stack Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+        }
+
+        /* Stack Container Styling */
+        .stack-container {
+            display: flex;
+            flex-direction: column-reverse; /* Items stack from bottom up */
+            width: 200px;
+            height: 400px;
+            border-left: 4px solid #334155;
+            border-right: 4px solid #334155;
+            border-bottom: 4px solid #334155;
+            border-radius: 0 0 8px 8px;
+            background-color: rgba(255, 255, 255, 0.5);
+            overflow: hidden;
+            position: relative;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+            transition: all 0.3s ease;
+        }
+
+        /* Individual Stack Item */
+        .stack-item {
+            width: 90%;
+            height: 50px;
+            margin: 0 auto 5px auto;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            border-radius: 6px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: relative;
+            
+            /* Animation initial state */
+            opacity: 0;
+            transform: translateY(-20px) scale(0.9);
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        /* Top Item distinct style */
+        .stack-item:last-child {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            border: 2px solid #fee2e2;
+        }
+
+        /* Animation Keyframes */
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        @keyframes popOut {
+            to {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.8);
+            }
+        }
+
+        .popping {
+            animation: popOut 0.3s ease-in forwards !important;
+        }
+
+        /* Pointer for Top */
+        .top-indicator {
+            position: absolute;
+            right: -80px;
+            color: #ef4444;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            transition: bottom 0.3s ease;
+        }
+        .top-indicator::before {
+            content: '← Top';
+            margin-left: 5px;
+        }
+
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row gap-8">
+        
+        <!-- Controls Section -->
+        <div class="flex-1 space-y-6">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 mb-2">Stack Visualizer</h1>
+                <p class="text-slate-500">LIFO: Last In, First Out</p>
+            </div>
+
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                <label class="block text-sm font-semibold text-slate-700 mb-2">Element Value</label>
+                <div class="flex gap-2">
+                    <input type="text" id="stackInput" placeholder="Enter value (e.g. 42)" 
+                           class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                           onkeypress="handleEnter(event)">
+                    <button onclick="generateRandom()" class="px-3 py-2 text-slate-500 hover:bg-slate-200 rounded-lg transition" title="Random Value">
+                        🎲
+                    </button>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="pushItem()" class="col-span-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>⬇️</span> Push
+                </button>
+                <button onclick="popItem()" class="col-span-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>⬆️</span> Pop
+                </button>
+                <button onclick="peekItem()" class="col-span-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>👀</span> Peek
+                </button>
+                <button onclick="clearStack()" class="col-span-1 bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
+                    <span>🗑️</span> Clear
+                </button>
+            </div>
+
+            <!-- Status Log -->
+            <div class="bg-slate-900 text-green-400 p-4 rounded-xl font-mono text-sm h-32 overflow-y-auto shadow-inner" id="consoleLog">
+                <div class="opacity-50">> System ready...</div>
+                <div class="opacity-50">> Stack empty.</div>
+            </div>
+
+            <!-- Complexity Info -->
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0">
+                        <span class="text-2xl">⚡</span>
+                    </div>
+                    <div class="ml-3">
+                        <p class="text-sm text-yellow-700">
+                            Push, Pop, and Peek are all 
+                            <span class="font-bold">O(1)</span> time complexity operations.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualizer Section -->
+        <div class="flex-1 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-slate-200 p-8 relative">
+            
+            <!-- Stack Container -->
+            <div class="relative">
+                <div id="stackContainer" class="stack-container pb-2">
+                    <!-- Items will be injected here -->
+                </div>
+                <!-- Labels -->
+                <div class="absolute -left-16 bottom-2 text-xs text-slate-400 font-mono rotate-[-90deg] origin-right pointer-events-none select-none">
+                    <!-- Index 0 (Bottom) -->
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="mt-6 flex gap-8 text-center">
+                <div>
+                    <div class="text-2xl font-bold text-slate-800" id="sizeDisplay">0</div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wide">Size</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold text-slate-800" id="topDisplay">-</div>
+                    <div class="text-xs text-slate-500 uppercase tracking-wide">Top Value</div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        const stackContainer = document.getElementById('stackContainer');
+        const stackInput = document.getElementById('stackInput');
+        const consoleLog = document.getElementById('consoleLog');
+        const sizeDisplay = document.getElementById('sizeDisplay');
+        const topDisplay = document.getElementById('topDisplay');
+        
+        // Simple Stack Data Structure for Logic
+        let stackData = [];
+        const MAX_SIZE = 7; // Limit for visual purposes
+
+        function log(message, type = 'info') {
+            const div = document.createElement('div');
+            div.innerText = `> ${message}`;
+            if (type === 'error') div.className = 'text-red-400 font-bold';
+            if (type === 'success') div.className = 'text-blue-300';
+            consoleLog.appendChild(div);
+            consoleLog.scrollTop = consoleLog.scrollHeight;
+        }
+
+        function updateStats() {
+            sizeDisplay.innerText = stackData.length;
+            topDisplay.innerText = stackData.length > 0 ? stackData[stackData.length - 1] : "-";
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') pushItem();
+        }
+
+        function generateRandom() {
+            stackInput.value = Math.floor(Math.random() * 100);
+        }
+
+        function pushItem() {
+            if (stackData.length >= MAX_SIZE) {
+                log("Error: Stack Overflow! (Visual limit reached)", 'error');
+                shakeContainer();
+                return;
+            }
+
+            const val = stackInput.value.trim();
+            if (!val) {
+                log("Please enter a value first.", 'info');
+                stackInput.focus();
+                return;
+            }
+
+            // Logic
+            stackData.push(val);
+            
+            // Visual
+            const item = document.createElement('div');
+            item.className = 'stack-item';
+            item.innerText = val;
+            stackContainer.appendChild(item); // Flex-col-reverse puts this at the "top" visually
+            
+            log(`Pushed: ${val}`, 'success');
+            stackInput.value = '';
+            stackInput.focus();
+            updateStats();
+        }
+
+        function popItem() {
+            if (stackData.length === 0) {
+                log("Error: Stack Underflow! (Stack is empty)", 'error');
+                shakeContainer();
+                return;
+            }
+
+            // Visual Animation
+            const visualItems = stackContainer.children;
+            const topItem = visualItems[visualItems.length - 1]; // Last child is visual top due to flex logic? 
+            // Wait, flex-direction: column-reverse means the DOM order is reversed visually.
+            // 1st child is bottom. Last child is top.
+            
+            topItem.classList.add('popping');
+
+            // Wait for animation to finish before removing logic
+            setTimeout(() => {
+                const poppedVal = stackData.pop();
+                if (topItem.parentNode) {
+                    stackContainer.removeChild(topItem);
+                }
+                log(`Popped: ${poppedVal}`, 'info');
+                updateStats();
+            }, 300);
+        }
+
+        function peekItem() {
+            if (stackData.length === 0) {
+                log("Stack is empty, nothing to peek.", 'error');
+                return;
+            }
+            const topVal = stackData[stackData.length - 1];
+            log(`Peeked: ${topVal} is at the top.`, 'success');
+            
+            // Highlight visual top
+            const visualItems = stackContainer.children;
+            const topItem = visualItems[visualItems.length - 1];
+            
+            // Flash effect
+            topItem.style.filter = "brightness(1.5)";
+            topItem.style.transform = "scale(1.05)";
+            setTimeout(() => {
+                topItem.style.filter = "";
+                topItem.style.transform = "";
+            }, 500);
+        }
+
+        function clearStack() {
+            stackData = [];
+            stackContainer.innerHTML = '';
+            log("Stack cleared.", 'info');
+            updateStats();
+        }
+
+        function shakeContainer() {
+            stackContainer.style.transform = "translateX(10px)";
+            setTimeout(() => {
+                stackContainer.style.transform = "translateX(-10px)";
+                setTimeout(() => {
+                    stackContainer.style.transform = "translateX(0)";
+                }, 100);
+            }, 100);
+        }
+    </script>
+</body>
+</html>
