@@ -3,310 +3,772 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Stack Visualizer</title>
+    <title>Data Structure Visualizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
         
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f4f8;
+            transition: background-color 0.3s ease, color 0.3s ease;
         }
 
-        /* Stack Container Styling */
+        /* --- Common Animations --- */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.9); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(20px) scale(0.9); }
+            to { opacity: 1; transform: translateX(0) scale(1); }
+        }
+        @keyframes popOut {
+            to { opacity: 0; transform: scale(0.5); }
+        }
+        .popping { animation: popOut 0.3s ease-in forwards !important; }
+
+        /* --- Stack Specific --- */
         .stack-container {
             display: flex;
-            flex-direction: column-reverse; /* Items stack from bottom up */
-            width: 200px;
-            height: 400px;
-            border-left: 4px solid #334155;
-            border-right: 4px solid #334155;
+            flex-direction: column-reverse;
+            width: 180px;
+            height: 350px;
             border-bottom: 4px solid #334155;
+            border-left: 4px solid #334155; 
+            border-right: 4px solid #334155;
             border-radius: 0 0 8px 8px;
             background-color: rgba(255, 255, 255, 0.5);
+            padding-bottom: 5px;
             overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
-            transition: all 0.3s ease;
+        }
+        .dark .stack-container {
+            background-color: rgba(30, 41, 59, 0.5);
+            border-color: #94a3b8;
         }
 
-        /* Individual Stack Item */
         .stack-item {
-            width: 90%;
-            height: 50px;
-            margin: 0 auto 5px auto;
+            width: 90%; height: 45px; margin: 2px auto;
             background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-            color: white;
+            color: white; display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; font-weight: bold;
+            animation: slideIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .stack-item:last-child { background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); }
+
+        /* --- Queue Specific --- */
+        .queue-container {
             display: flex;
             align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            border-radius: 6px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            height: 100px;
+            min-width: 300px;
+            border-top: 4px solid #334155;
+            border-bottom: 4px solid #334155;
+            background-color: rgba(255, 255, 255, 0.5);
+            padding: 0 20px;
+            overflow-x: auto;
+            gap: 10px;
+        }
+        .dark .queue-container {
+            background-color: rgba(30, 41, 59, 0.5);
+            border-color: #94a3b8;
+        }
+
+        .queue-item {
+            min-width: 60px; height: 60px;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white; display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; font-weight: bold;
+            animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            flex-shrink: 0;
             position: relative;
-            
-            /* Animation initial state */
-            opacity: 0;
-            transform: translateY(-20px) scale(0.9);
-            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .queue-item::after {
+            content: '→'; position: absolute; right: -15px; color: #64748b; font-size: 1.2rem;
+        }
+        .dark .queue-item::after { color: #cbd5e1; }
+
+        .queue-item:last-child::after { content: ''; } 
+        .queue-item:first-child { border: 3px solid #ef4444; } 
+
+        /* --- Linked List Specific --- */
+        .ll-container {
+            display: flex; align-items: center; flex-wrap: wrap; gap: 0;
+            padding: 20px; justify-content: center;
+        }
+        .ll-node {
+            display: flex; align-items: center;
+            animation: slideInRight 0.3s ease forwards;
+        }
+        .ll-box {
+            width: 80px; height: 50px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+            color: white; display: flex; align-items: center; justify-content: center;
+            border-radius: 6px; font-weight: bold; border: 2px solid #6d28d9;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .ll-next {
+            width: 30px; height: 50px;
+            background: #4c1d95; border-radius: 0 6px 6px 0;
+            display: flex; align-items: center; justify-content: center;
+            border-left: 1px solid rgba(255,255,255,0.3);
+        }
+        .ll-arrow {
+            font-size: 24px; color: #64748b; margin: 0 10px;
+        }
+        .dark .ll-arrow { color: #cbd5e1; }
+        
+        .ll-null {
+            font-family: monospace; color: #ef4444; font-weight: bold;
+        }
+        .dark .ll-null { color: #f87171; }
+
+        /* --- Tree Specific --- */
+        .tree-container {
+            display: flex; justify-content: center; padding: 20px;
+            width: 100%; overflow: auto;
+        }
+        .tf-tree {
+            display: flex; text-align: center;
+        }
+        .tf-tree .tf-nc {
+            border: 2px solid #334155; padding: 10px 15px; 
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white; font-weight: bold; border-radius: 50%;
+            display: inline-block; position: relative; z-index: 10;
+            width: 45px; height: 45px; line-height: 22px;
+            transition: all 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .dark .tf-tree .tf-nc { border-color: #cbd5e1; }
+
+        .tree-node {
+            display: flex; flex-direction: column; align-items: center; margin: 0 10px;
+        }
+        .tree-children {
+            display: flex; flex-direction: row; justify-content: center; margin-top: 20px;
+            position: relative;
+        }
+        .tree-children::before {
+            content: ''; position: absolute; top: -20px; left: 50%; 
+            width: 2px; height: 20px; background: #94a3b8; z-index: 0;
+        }
+        .dark .tree-children::before { background: #64748b; }
+
+        .tree-connector {
+            position: absolute; top: -20px; height: 2px; background: #94a3b8; z-index: 0;
+        }
+        .tree-root > .tree-children::before { display: none; }
+
+        /* Modal Transitions */
+        .modal { opacity: 0; visibility: hidden; transition: all 0.3s ease-in-out; }
+        .modal.active { opacity: 1; visibility: visible; }
+        .modal-content { transform: scale(0.95); transition: all 0.3s ease-in-out; }
+        .modal.active .modal-content { transform: scale(1); }
+
+        .tab-btn {
+            padding: 8px 16px; border-radius: 8px; font-weight: 600; color: #475569;
+            transition: all 0.2s; background: transparent;
+        }
+        .dark .tab-btn { color: #94a3b8; }
+        
+        .tab-btn.active {
+            background-color: #e2e8f0; color: #0f172a; box-shadow: inset 0 2px 4px 0 rgba(0,0,0,0.05);
+        }
+        .dark .tab-btn.active {
+            background-color: #334155; color: #f8fafc;
         }
 
-        /* Top Item distinct style */
-        .stack-item:last-child {
-            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-            border: 2px solid #fee2e2;
-        }
-
-        /* Animation Keyframes */
-        @keyframes slideIn {
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-
-        @keyframes popOut {
-            to {
-                opacity: 0;
-                transform: translateY(-50px) scale(0.8);
-            }
-        }
-
-        .popping {
-            animation: popOut 0.3s ease-in forwards !important;
-        }
-
-        /* Pointer for Top */
-        .top-indicator {
-            position: absolute;
-            right: -80px;
-            color: #ef4444;
-            font-weight: bold;
-            display: flex;
-            align-items: center;
-            transition: bottom 0.3s ease;
-        }
-        .top-indicator::before {
-            content: '← Top';
-            margin-left: 5px;
-        }
+        .tab-btn:hover:not(.active) { background-color: #f1f5f9; }
+        .dark .tab-btn:hover:not(.active) { background-color: #1e293b; }
 
     </style>
 </head>
-<body class="min-h-screen flex flex-col items-center justify-center p-4">
+<body class="min-h-screen flex flex-col items-center justify-center p-4 bg-[#f0f4f8] dark:bg-slate-950 transition-colors duration-300">
 
-    <div class="bg-white p-8 rounded-2xl shadow-xl w-full max-w-4xl flex flex-col md:flex-row gap-8">
+    <!-- Theme Toggle -->
+    <button onclick="toggleTheme()" class="fixed top-4 right-4 bg-white dark:bg-slate-800 p-2 rounded-full shadow-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-yellow-400 hover:scale-105 transition z-50">
+        <svg id="icon-sun" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+        <svg id="icon-moon" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+    </button>
+
+    <div class="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-6xl flex flex-col md:flex-row gap-8 min-h-[600px] transition-colors duration-300">
         
-        <!-- Controls Section -->
-        <div class="flex-1 space-y-6">
+        <!-- Left Panel: Controls -->
+        <div class="w-full md:w-1/3 flex flex-col gap-5 border-r border-slate-100 dark:border-slate-700 pr-0 md:pr-6">
             <div>
-                <h1 class="text-3xl font-bold text-slate-800 mb-2">Stack Visualizer</h1>
-                <p class="text-slate-500">LIFO: Last In, First Out</p>
+                <h1 class="text-2xl font-bold text-slate-800 dark:text-slate-100">DS Visualizer</h1>
+                <p class="text-xs text-slate-400 dark:text-slate-500 font-mono">Interactive Data Structures</p>
             </div>
 
-            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                <label class="block text-sm font-semibold text-slate-700 mb-2">Element Value</label>
+            <!-- Navigation Tabs -->
+            <div class="flex flex-wrap gap-2 bg-slate-50 dark:bg-slate-700/50 p-2 rounded-xl border border-slate-200 dark:border-slate-600">
+                <button onclick="switchTab('stack')" id="btn-stack" class="tab-btn active">Stack</button>
+                <button onclick="switchTab('queue')" id="btn-queue" class="tab-btn">Queue</button>
+                <button onclick="switchTab('ll')" id="btn-ll" class="tab-btn">Linked List</button>
+                <button onclick="switchTab('tree')" id="btn-tree" class="tab-btn">Tree (BST)</button>
+            </div>
+
+            <!-- Input Area -->
+            <div class="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-200 dark:border-slate-600">
+                <label class="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-2">Value</label>
                 <div class="flex gap-2">
-                    <input type="text" id="stackInput" placeholder="Enter value (e.g. 42)" 
-                           class="flex-1 px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    <input type="number" id="dataInput" placeholder="#" 
+                           class="w-full px-3 py-2 border border-slate-300 dark:border-slate-500 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                            onkeypress="handleEnter(event)">
-                    <button onclick="generateRandom()" class="px-3 py-2 text-slate-500 hover:bg-slate-200 rounded-lg transition" title="Random Value">
-                        🎲
-                    </button>
+                    <button onclick="generateRandom()" class="px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-500 text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg" title="Random">🎲</button>
                 </div>
             </div>
 
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="pushItem()" class="col-span-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
-                    <span>⬇️</span> Push
-                </button>
-                <button onclick="popItem()" class="col-span-1 bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
-                    <span>⬆️</span> Pop
-                </button>
-                <button onclick="peekItem()" class="col-span-1 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
-                    <span>👀</span> Peek
-                </button>
-                <button onclick="clearStack()" class="col-span-1 bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-4 rounded-lg shadow transition transform active:scale-95 flex items-center justify-center gap-2">
-                    <span>🗑️</span> Clear
-                </button>
-            </div>
+            <!-- Dynamic Controls Container -->
+            <div id="controls-area" class="grid grid-cols-2 gap-2"></div>
 
-            <!-- Status Log -->
-            <div class="bg-slate-900 text-green-400 p-4 rounded-xl font-mono text-sm h-32 overflow-y-auto shadow-inner" id="consoleLog">
+            <!-- Log -->
+            <div class="bg-slate-900 text-green-400 p-3 rounded-xl font-mono text-xs h-32 overflow-y-auto shadow-inner flex-grow border border-slate-800" id="consoleLog">
                 <div class="opacity-50">> System ready...</div>
-                <div class="opacity-50">> Stack empty.</div>
             </div>
 
-            <!-- Complexity Info -->
-            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
-                <div class="flex items-center">
-                    <div class="flex-shrink-0">
-                        <span class="text-2xl">⚡</span>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm text-yellow-700">
-                            Push, Pop, and Peek are all 
-                            <span class="font-bold">O(1)</span> time complexity operations.
-                        </p>
-                    </div>
-                </div>
+            <!-- Complexity Hint -->
+            <div id="complexity-hint" class="bg-yellow-50 dark:bg-yellow-900/30 border-l-4 border-yellow-400 dark:border-yellow-600 p-3 rounded text-xs text-yellow-800 dark:text-yellow-200">
+                Select a structure to see time complexity.
+            </div>
+
+            <!-- Donation -->
+            <div class="mt-auto">
+                 <button onclick="openModal('donationModal')" class="w-full bg-orange-50 dark:bg-orange-900/20 hover:bg-orange-100 dark:hover:bg-orange-900/40 text-orange-700 dark:text-orange-400 text-sm font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2 border border-orange-200 dark:border-orange-800">
+                    <span>☕</span> Buy me a Coffee (Nagad)
+                </button>
             </div>
         </div>
 
-        <!-- Visualizer Section -->
-        <div class="flex-1 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-slate-200 p-8 relative">
-            
-            <!-- Stack Container -->
-            <div class="relative">
-                <div id="stackContainer" class="stack-container pb-2">
-                    <!-- Items will be injected here -->
-                </div>
-                <!-- Labels -->
-                <div class="absolute -left-16 bottom-2 text-xs text-slate-400 font-mono rotate-[-90deg] origin-right pointer-events-none select-none">
-                    <!-- Index 0 (Bottom) -->
-                </div>
+        <!-- Right Panel: Visualization -->
+        <div class="w-full md:w-2/3 flex flex-col bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 relative overflow-hidden transition-colors duration-300">
+            <div class="absolute top-4 right-4 bg-white/80 dark:bg-slate-700/80 px-3 py-1 rounded-full text-xs font-bold text-slate-500 dark:text-slate-200 border border-slate-200 dark:border-slate-600 shadow-sm z-10 backdrop-blur-sm" id="mode-badge">
+                Stack Mode
             </div>
 
-            <!-- Stats -->
-            <div class="mt-6 flex gap-8 text-center">
+            <!-- Visualization Canvas -->
+            <div id="canvas-area" class="flex-grow flex items-center justify-center p-8 overflow-auto min-h-[400px]"></div>
+
+            <!-- Footer Stats -->
+            <div class="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 p-4 flex justify-around text-center">
                 <div>
-                    <div class="text-2xl font-bold text-slate-800" id="sizeDisplay">0</div>
-                    <div class="text-xs text-slate-500 uppercase tracking-wide">Size</div>
+                    <div class="text-xl font-bold text-slate-800 dark:text-white" id="stat-1">0</div>
+                    <div class="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider" id="label-1">Size</div>
                 </div>
                 <div>
-                    <div class="text-2xl font-bold text-slate-800" id="topDisplay">-</div>
-                    <div class="text-xs text-slate-500 uppercase tracking-wide">Top Value</div>
+                    <div class="text-xl font-bold text-slate-800 dark:text-white" id="stat-2">-</div>
+                    <div class="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider" id="label-2">Top</div>
                 </div>
             </div>
+        </div>
+    </div>
 
+    <!-- Donation Modal -->
+    <div id="donationModal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm p-4">
+        <div class="modal-content bg-white dark:bg-slate-800 w-full max-w-sm rounded-2xl shadow-2xl p-6 relative border border-slate-200 dark:border-slate-700">
+            <button onclick="closeModal('donationModal')" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+            <div class="text-center">
+                <div class="mx-auto w-16 h-16 bg-orange-100 dark:bg-orange-900/50 rounded-full flex items-center justify-center mb-4"><span class="text-3xl">🎁</span></div>
+                <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">Buy me a coffee</h2>
+                <div class="bg-orange-50 dark:bg-slate-700/50 border border-orange-200 dark:border-slate-600 rounded-xl p-4 mb-6">
+                    <div class="flex items-center justify-between mb-1"><span class="text-xs font-semibold text-orange-800 dark:text-orange-300 uppercase">Nagad (Personal)</span></div>
+                    <div class="flex items-center justify-between gap-2">
+                        <code id="nagadNumber" class="text-lg font-mono font-bold text-slate-800 dark:text-slate-200 select-all">01627813480</code>
+                        <button onclick="copyNumber()" class="text-sm bg-white dark:bg-slate-600 border border-orange-200 dark:border-slate-500 text-orange-600 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-slate-500 px-3 py-1 rounded transition"><span id="copyText">Copy</span></button>
+                    </div>
+                </div>
+                <button onclick="closeModal('donationModal')" class="w-full bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 dark:hover:bg-slate-600 text-white font-bold py-3 rounded-xl transition">Got it, thanks!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REVISION MODAL -->
+    <div id="revisionModal" class="modal fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm p-4">
+        <div class="modal-content bg-white dark:bg-slate-800 w-full max-w-md rounded-2xl shadow-2xl p-6 relative border border-slate-200 dark:border-slate-700">
+            <!-- Close Button (Top Right) -->
+            <button onclick="closeModal('revisionModal')" class="absolute top-4 right-4 bg-slate-100 dark:bg-slate-700 hover:bg-red-100 dark:hover:bg-red-900/30 text-slate-400 hover:text-red-500 dark:text-slate-300 dark:hover:text-red-400 p-1 rounded-full transition">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <!-- Content Area -->
+            <div id="revisionContent">
+                <!-- Content injected via JS -->
+            </div>
+
+            <div class="mt-6">
+                 <button onclick="closeModal('revisionModal')" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 rounded-lg transition shadow-lg shadow-blue-500/30">
+                    Start Visualizing
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
-        const stackContainer = document.getElementById('stackContainer');
-        const stackInput = document.getElementById('stackInput');
-        const consoleLog = document.getElementById('consoleLog');
-        const sizeDisplay = document.getElementById('sizeDisplay');
-        const topDisplay = document.getElementById('topDisplay');
-        
-        // Simple Stack Data Structure for Logic
-        let stackData = [];
-        const MAX_SIZE = 7; // Limit for visual purposes
+        // --- Revision Content Data ---
+        const revisionInfo = {
+            'stack': {
+                icon: '📚',
+                title: 'Stack (LIFO)',
+                desc: 'A Stack is a linear data structure that follows the <b>Last In, First Out</b> principle.',
+                points: [
+                    '<b>Push:</b> Add an element to the top.',
+                    '<b>Pop:</b> Remove the element from the top.',
+                    '<b>Complexity:</b> O(1) for insertion and deletion.',
+                    '<b>Usage:</b> Undo/Redo, Browser History, Function Call Stack.'
+                ]
+            },
+            'queue': {
+                icon: '🚶',
+                title: 'Queue (FIFO)',
+                desc: 'A Queue is a linear structure that follows the <b>First In, First Out</b> principle.',
+                points: [
+                    '<b>Enqueue:</b> Add an element to the back (Rear).',
+                    '<b>Dequeue:</b> Remove an element from the front.',
+                    '<b>Complexity:</b> O(1) for both operations.',
+                    '<b>Usage:</b> Printer jobs, CPU task scheduling.'
+                ]
+            },
+            'll': {
+                icon: '🔗',
+                title: 'Linked List',
+                desc: 'A linear collection of data elements (nodes), where each node points to the next.',
+                points: [
+                    '<b>Node:</b> Contains data and a pointer (next).',
+                    '<b>Dynamic Size:</b> Grows and shrinks as needed.',
+                    '<b>Access:</b> O(n) linear time (no random access).',
+                    '<b>Insertion:</b> O(1) if position is known.'
+                ]
+            },
+            'tree': {
+                icon: '🌳',
+                title: 'Binary Search Tree',
+                desc: 'A hierarchical structure where each node has at most two children (Left & Right).',
+                points: [
+                    '<b>Rule:</b> Left < Parent < Right.',
+                    '<b>Search:</b> O(log n) average time complexity.',
+                    '<b>Root:</b> The top-most node of the tree.',
+                    '<b>Leaf:</b> A node with no children.'
+                ]
+            }
+        };
 
-        function log(message, type = 'info') {
+        // --- Theme Logic ---
+        function toggleTheme() {
+            const html = document.documentElement;
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                localStorage.setItem('theme', 'light');
+            } else {
+                html.classList.add('dark');
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            document.documentElement.classList.add('dark');
+        } else {
+            document.documentElement.classList.remove('dark');
+        }
+
+        // --- State ---
+        let currentMode = 'stack';
+        let stackData = [];
+        let queueData = [];
+        let llData = [];
+        let treeRoot = null;
+        let nextId = 0;
+
+        // --- DOM Elements ---
+        const controlsArea = document.getElementById('controls-area');
+        const canvasArea = document.getElementById('canvas-area');
+        const dataInput = document.getElementById('dataInput');
+        const consoleLog = document.getElementById('consoleLog');
+        const complexityHint = document.getElementById('complexity-hint');
+        const modeBadge = document.getElementById('mode-badge');
+        
+        const stat1 = document.getElementById('stat-1');
+        const stat2 = document.getElementById('stat-2');
+        const label1 = document.getElementById('label-1');
+        const label2 = document.getElementById('label-2');
+
+        // --- Configs ---
+        const structures = {
+            'stack': {
+                name: 'Stack',
+                controls: `
+                    <button onclick="stackPush()" class="bg-blue-600 hover:bg-blue-700 text-white py-2 rounded shadow">Push</button>
+                    <button onclick="stackPop()" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow">Pop</button>
+                    <button onclick="stackPeek()" class="bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded shadow">Peek</button>
+                    <button onclick="resetAll()" class="bg-slate-500 hover:bg-slate-600 text-white py-2 rounded shadow">Clear</button>
+                `,
+                complexity: 'Push/Pop: <b>O(1)</b>. Access: <b>O(n)</b>.',
+                init: renderStack
+            },
+            'queue': {
+                name: 'Queue',
+                controls: `
+                    <button onclick="queueEnqueue()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded shadow">Enqueue</button>
+                    <button onclick="queueDequeue()" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow">Dequeue</button>
+                    <button onclick="resetAll()" class="bg-slate-500 hover:bg-slate-600 text-white py-2 rounded shadow">Clear</button>
+                `,
+                complexity: 'Enqueue/Dequeue: <b>O(1)</b>.',
+                init: renderQueue
+            },
+            'll': {
+                name: 'Linked List',
+                controls: `
+                    <button onclick="llAddHead()" class="bg-violet-600 hover:bg-violet-700 text-white py-2 rounded shadow text-xs">Add Head</button>
+                    <button onclick="llAddTail()" class="bg-violet-600 hover:bg-violet-700 text-white py-2 rounded shadow text-xs">Add Tail</button>
+                    <button onclick="llRemoveHead()" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow text-xs">Rm Head</button>
+                    <button onclick="llRemoveTail()" class="bg-red-500 hover:bg-red-600 text-white py-2 rounded shadow text-xs">Rm Tail</button>
+                `,
+                complexity: 'Add/Rm Head: <b>O(1)</b>. Search: <b>O(n)</b>.',
+                init: renderLL
+            },
+            'tree': {
+                name: 'BST',
+                controls: `
+                    <button onclick="treeInsert()" class="col-span-2 bg-amber-500 hover:bg-amber-600 text-white py-2 rounded shadow">Insert Node</button>
+                    <button onclick="resetAll()" class="col-span-2 bg-slate-500 hover:bg-slate-600 text-white py-2 rounded shadow">Clear Tree</button>
+                `,
+                complexity: 'Insert/Search: <b>O(log n)</b> avg.',
+                init: renderTree
+            }
+        };
+
+        // --- Core Logic ---
+        function init() {
+            switchTab('stack');
+        }
+
+        function switchTab(mode) {
+            currentMode = mode;
+            
+            // UI Updates
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+            
+            modeBadge.innerText = structures[mode].name + " Mode";
+            controlsArea.innerHTML = structures[mode].controls;
+            complexityHint.innerHTML = structures[mode].complexity;
+            
+            structures[mode].init();
+            log(`Switched to ${structures[mode].name}.`);
+            updateStats();
+
+            // TRIGGER REVISION MODAL
+            openRevision(mode);
+        }
+
+        // --- Revision Modal Logic ---
+        function openRevision(mode) {
+            const data = revisionInfo[mode];
+            const contentDiv = document.getElementById('revisionContent');
+            
+            let listHtml = '';
+            data.points.forEach(p => {
+                listHtml += `<li class="mb-2 text-sm text-slate-600 dark:text-slate-300 flex items-start gap-2">
+                    <span class="text-blue-500 mt-1">●</span> <span>${p}</span>
+                </li>`;
+            });
+
+            contentDiv.innerHTML = `
+                <div class="text-center mb-6">
+                    <div class="text-4xl mb-2">${data.icon}</div>
+                    <h3 class="text-2xl font-bold text-slate-800 dark:text-white">${data.title}</h3>
+                </div>
+                <p class="text-slate-600 dark:text-slate-300 mb-4 text-center leading-relaxed">
+                    ${data.desc}
+                </p>
+                <div class="bg-slate-50 dark:bg-slate-700/50 p-4 rounded-xl border border-slate-100 dark:border-slate-600">
+                    <ul class="text-left">
+                        ${listHtml}
+                    </ul>
+                </div>
+            `;
+            
+            openModal('revisionModal');
+        }
+
+
+        function getInput() {
+            const val = dataInput.value.trim();
+            if (val === '') {
+                log("Please enter a value.", 'error');
+                dataInput.focus();
+                return null;
+            }
+            dataInput.value = '';
+            dataInput.focus();
+            return parseInt(val) || val;
+        }
+
+        function log(msg, type='info') {
             const div = document.createElement('div');
-            div.innerText = `> ${message}`;
-            if (type === 'error') div.className = 'text-red-400 font-bold';
-            if (type === 'success') div.className = 'text-blue-300';
+            div.innerHTML = `> ${msg}`;
+            if(type === 'error') div.classList.add('text-red-400');
             consoleLog.appendChild(div);
             consoleLog.scrollTop = consoleLog.scrollHeight;
         }
 
-        function updateStats() {
-            sizeDisplay.innerText = stackData.length;
-            topDisplay.innerText = stackData.length > 0 ? stackData[stackData.length - 1] : "-";
-        }
-
-        function handleEnter(e) {
-            if (e.key === 'Enter') pushItem();
-        }
-
-        function generateRandom() {
-            stackInput.value = Math.floor(Math.random() * 100);
-        }
-
-        function pushItem() {
-            if (stackData.length >= MAX_SIZE) {
-                log("Error: Stack Overflow! (Visual limit reached)", 'error');
-                shakeContainer();
-                return;
-            }
-
-            const val = stackInput.value.trim();
-            if (!val) {
-                log("Please enter a value first.", 'info');
-                stackInput.focus();
-                return;
-            }
-
-            // Logic
-            stackData.push(val);
-            
-            // Visual
-            const item = document.createElement('div');
-            item.className = 'stack-item';
-            item.innerText = val;
-            stackContainer.appendChild(item); // Flex-col-reverse puts this at the "top" visually
-            
-            log(`Pushed: ${val}`, 'success');
-            stackInput.value = '';
-            stackInput.focus();
+        function resetAll() {
+            stackData = [];
+            queueData = [];
+            llData = [];
+            treeRoot = null;
+            structures[currentMode].init();
+            log('Cleared data.');
             updateStats();
         }
 
-        function popItem() {
-            if (stackData.length === 0) {
-                log("Error: Stack Underflow! (Stack is empty)", 'error');
-                shakeContainer();
-                return;
-            }
+        function generateRandom() {
+            dataInput.value = Math.floor(Math.random() * 100);
+        }
 
-            // Visual Animation
-            const visualItems = stackContainer.children;
-            const topItem = visualItems[visualItems.length - 1]; // Last child is visual top due to flex logic? 
-            // Wait, flex-direction: column-reverse means the DOM order is reversed visually.
-            // 1st child is bottom. Last child is top.
-            
-            topItem.classList.add('popping');
+        function handleEnter(e) {
+            if(e.key !== 'Enter') return;
+            if(currentMode === 'stack') stackPush();
+            if(currentMode === 'queue') queueEnqueue();
+            if(currentMode === 'll') llAddTail();
+            if(currentMode === 'tree') treeInsert();
+        }
 
-            // Wait for animation to finish before removing logic
+        // --- STACK IMPLEMENTATION ---
+        function stackPush() {
+            const val = getInput();
+            if (val === null) return;
+            if (stackData.length >= 7) return log('Stack Overflow (Visual Limit)', 'error');
+            stackData.push(val);
+            renderStack();
+            log(`Pushed ${val}`);
+            updateStats();
+        }
+
+        function stackPop() {
+            if (stackData.length === 0) return log('Stack Underflow', 'error');
+            const el = document.querySelector('.stack-item:last-child');
+            if(el) el.classList.add('popping');
             setTimeout(() => {
-                const poppedVal = stackData.pop();
-                if (topItem.parentNode) {
-                    stackContainer.removeChild(topItem);
-                }
-                log(`Popped: ${poppedVal}`, 'info');
+                const val = stackData.pop();
+                renderStack();
+                log(`Popped ${val}`);
                 updateStats();
             }, 300);
         }
 
-        function peekItem() {
-            if (stackData.length === 0) {
-                log("Stack is empty, nothing to peek.", 'error');
-                return;
-            }
-            const topVal = stackData[stackData.length - 1];
-            log(`Peeked: ${topVal} is at the top.`, 'success');
-            
-            // Highlight visual top
-            const visualItems = stackContainer.children;
-            const topItem = visualItems[visualItems.length - 1];
-            
-            // Flash effect
-            topItem.style.filter = "brightness(1.5)";
-            topItem.style.transform = "scale(1.05)";
+        function stackPeek() {
+            if(stackData.length === 0) return log('Empty stack');
+            const el = document.querySelector('.stack-item:last-child');
+            el.style.transform = "scale(1.1)";
+            el.style.filter = "brightness(1.2)";
             setTimeout(() => {
-                topItem.style.filter = "";
-                topItem.style.transform = "";
+                el.style.transform = "";
+                el.style.filter = "";
             }, 500);
+            log(`Peek: ${stackData[stackData.length-1]}`);
         }
 
-        function clearStack() {
-            stackData = [];
-            stackContainer.innerHTML = '';
-            log("Stack cleared.", 'info');
+        function renderStack() {
+            let html = `<div class="stack-container justify-end">`;
+            stackData.forEach(val => {
+                html += `<div class="stack-item">${val}</div>`;
+            });
+            html += `</div>
+            <div class="absolute -left-10 bottom-10 text-xs text-slate-400 dark:text-slate-500 rotate-[-90deg]">Index 0</div>
+            `;
+            canvasArea.innerHTML = html;
+        }
+
+        // --- QUEUE IMPLEMENTATION ---
+        function queueEnqueue() {
+            const val = getInput();
+            if (val === null) return;
+            if (queueData.length >= 7) return log('Queue Full (Visual Limit)', 'error');
+            queueData.push(val);
+            renderQueue();
+            log(`Enqueued ${val}`);
             updateStats();
         }
 
-        function shakeContainer() {
-            stackContainer.style.transform = "translateX(10px)";
+        function queueDequeue() {
+            if (queueData.length === 0) return log('Queue Empty', 'error');
+            const el = document.querySelector('.queue-item:first-child');
+            if(el) el.classList.add('popping');
             setTimeout(() => {
-                stackContainer.style.transform = "translateX(-10px)";
-                setTimeout(() => {
-                    stackContainer.style.transform = "translateX(0)";
-                }, 100);
-            }, 100);
+                const val = queueData.shift();
+                renderQueue();
+                log(`Dequeued ${val}`);
+                updateStats();
+            }, 300);
         }
+
+        function renderQueue() {
+            let html = `<div class="relative"><div class="queue-container">`;
+            queueData.forEach((val, i) => {
+                html += `<div class="queue-item">${val}</div>`;
+            });
+            html += `</div>
+            <div class="absolute top-[-20px] left-0 text-xs text-red-500 font-bold">Front</div>
+            <div class="absolute top-[-20px] right-0 text-xs text-emerald-600 dark:text-emerald-400 font-bold">Back</div>
+            </div>`;
+            canvasArea.innerHTML = html;
+        }
+
+        // --- LINKED LIST IMPLEMENTATION ---
+        function llAddHead() {
+            const val = getInput(); if(val===null) return;
+            if(llData.length > 6) return log('Limit reached', 'error');
+            llData.unshift({ val, id: nextId++ });
+            renderLL();
+            log(`Added Head ${val}`);
+            updateStats();
+        }
+        function llAddTail() {
+            const val = getInput(); if(val===null) return;
+            if(llData.length > 6) return log('Limit reached', 'error');
+            llData.push({ val, id: nextId++ });
+            renderLL();
+            log(`Added Tail ${val}`);
+            updateStats();
+        }
+        function llRemoveHead() {
+            if(llData.length === 0) return log('List empty', 'error');
+            llData.shift();
+            renderLL();
+            log(`Removed Head`);
+            updateStats();
+        }
+        function llRemoveTail() {
+            if(llData.length === 0) return log('List empty', 'error');
+            llData.pop();
+            renderLL();
+            log(`Removed Tail`);
+            updateStats();
+        }
+
+        function renderLL() {
+            let html = `<div class="ll-container">`;
+            llData.forEach((node, i) => {
+                html += `
+                <div class="ll-node">
+                    <div class="flex">
+                        <div class="ll-box border-r border-white/20">${node.val}</div>
+                        <div class="ll-next"><div class="w-2 h-2 bg-white rounded-full"></div></div>
+                    </div>
+                    <div class="ll-arrow">→</div>
+                </div>`;
+            });
+            html += `<div class="ll-null">NULL</div></div>`;
+            canvasArea.innerHTML = html;
+        }
+
+        // --- BST IMPLEMENTATION ---
+        class TreeNode {
+            constructor(val) { this.val = val; this.left = null; this.right = null; }
+        }
+
+        function treeInsert() {
+            const val = getInput(); if(val===null) return;
+            if(!treeRoot) {
+                treeRoot = new TreeNode(val);
+            } else {
+                insertNode(treeRoot, val);
+            }
+            renderTree();
+            log(`Inserted ${val} into BST`);
+            updateStats();
+        }
+
+        function insertNode(node, val) {
+            if(val < node.val) {
+                if(!node.left) node.left = new TreeNode(val);
+                else insertNode(node.left, val);
+            } else {
+                if(!node.right) node.right = new TreeNode(val);
+                else insertNode(node.right, val);
+            }
+        }
+
+        function renderTree() {
+            if(!treeRoot) {
+                canvasArea.innerHTML = '<div class="text-slate-400 dark:text-slate-500">Tree is empty</div>';
+                return;
+            }
+            function buildTreeHtml(node) {
+                if(!node) return '';
+                let childrenHtml = '';
+                if(node.left || node.right) {
+                    childrenHtml = `<div class="tree-children">`;
+                    const leftContent = node.left ? buildTreeHtml(node.left) : '<div class="tree-node invisible"><div class="tf-nc">0</div></div>'; 
+                    const rightContent = node.right ? buildTreeHtml(node.right) : '<div class="tree-node invisible"><div class="tf-nc">0</div></div>';
+                    childrenHtml += leftContent + rightContent;
+                    childrenHtml += `</div>`;
+                }
+                return `
+                <div class="tree-node ${node === treeRoot ? 'tree-root' : ''}">
+                    <div class="tf-nc">${node.val}</div>
+                    ${childrenHtml}
+                </div>`;
+            }
+            canvasArea.innerHTML = `<div class="tree-container"><div class="tf-tree">${buildTreeHtml(treeRoot)}</div></div>`;
+        }
+
+        function countNodes(node) {
+            if(!node) return 0;
+            return 1 + countNodes(node.left) + countNodes(node.right);
+        }
+
+        // --- UTILS ---
+        function updateStats() {
+            if(currentMode === 'stack') {
+                stat1.innerText = stackData.length; label1.innerText = 'Size';
+                stat2.innerText = stackData.length ? stackData[stackData.length-1] : '-'; label2.innerText = 'Top';
+            }
+            else if(currentMode === 'queue') {
+                stat1.innerText = queueData.length; label1.innerText = 'Size';
+                stat2.innerText = queueData.length ? queueData[0] : '-'; label2.innerText = 'Front';
+            }
+            else if(currentMode === 'll') {
+                stat1.innerText = llData.length; label1.innerText = 'Length';
+                stat2.innerText = llData.length ? llData[0].val : '-'; label2.innerText = 'Head';
+            }
+            else if(currentMode === 'tree') {
+                const count = countNodes(treeRoot);
+                stat1.innerText = count; label1.innerText = 'Nodes';
+                stat2.innerText = treeRoot ? treeRoot.val : '-'; label2.innerText = 'Root';
+            }
+        }
+
+        // --- Modal General ---
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        
+        function copyNumber() {
+            const num = document.getElementById('nagadNumber').innerText;
+            navigator.clipboard.writeText(num).then(() => {
+                document.getElementById('copyText').innerText = 'Copied!';
+                setTimeout(() => document.getElementById('copyText').innerText = 'Copy', 2000);
+            });
+        }
+
+        // Start
+        init();
+
     </script>
 </body>
 </html>
